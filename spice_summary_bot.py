@@ -27,6 +27,7 @@ WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL") # Render sets this env var
 if not BOT_TOKEN:
     logging.error("BOT_TOKEN environment variable not set!")
     # In a real deployment, you might exit here. For local testing, you could set a default.
+    # For this guide, we'll assume it will be set on Render.
     pass 
 if not GEMINI_API_KEY:
     logging.error("GEMINI_API_KEY environment variable not set!")
@@ -49,10 +50,20 @@ ASKING_FOR_INPUT, ASKING_FOR_AUDIENCE, ASKING_FOR_SENTIMENT, ASKING_FOR_CLAIMS =
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user for text or a URL to summarize."""
-    await update.message.reply_text(
-        "Hello! I'm your Spice Summary Bot. Send me any text or a URL to summarize. "
-        "You can cancel at any time by sending /cancel."
+    welcome_message = (
+        "Hello! I'm your Spice Summary Bot, designed to give you quick, tailored summaries of any text or URL. "
+        "What makes me 'spicy'? I don't just summarize; I adapt to your needs!\n\n"
+        "My key features include:\n"
+        "- *Customized Summaries:* Get summaries tailored for any audience (e.g., 'for a 10-year-old', 'for a technical expert', 'in simple terms').\n"
+        "- *Sentiment Analysis:* Optionally gauge the overall tone (positive, negative, or neutral) of the content.\n"
+        "- *Key Claims Extraction:* Easily identify the main arguments or claims within the text.\n\n"
+        "Here are the commands you can use:\n"
+        "- /summarize: Start a new summarization process.\n"
+        "- /cancel: Stop any ongoing process.\n"
+        "- /start: See this welcome message again.\n\n"
+        "Ready to get started? Send /summarize!"
     )
+    await update.message.reply_text(welcome_message, parse_mode=ParseMode.MARKDOWN)
     return ASKING_FOR_INPUT
 
 async def receive_content(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -166,8 +177,8 @@ async def handle_claims_choice_and_summarize(update: Update, context: ContextTyp
         if include_claims:
             prompt_parts.append("Additionally, extract 3-5 key claims or arguments from the text and list them as bullet points.")
         
-        prompt_parts.append("Format the output as follows: 'Summary: [summary text]\n[Optional Sentiment: Sentiment: [sentiment] (Reason: [reason])]\n[Optional Claims: Key Claims:\n- Claim 1\n- Claim 2]'")
-        prompt_parts.append(f":\n\n{text_content}")
+        prompt_parts.append("Format the output as follows: 'Summary: [summary text]\\n[Optional Sentiment: Sentiment: [sentiment] (Reason: [reason])]\\n[Optional Claims: Key Claims:\\n- Claim 1\\n- Claim 2]'")
+        prompt_parts.append(f":\\n\\n{text_content}")
 
         full_prompt = " ".join(prompt_parts)
         

@@ -1,4 +1,5 @@
 
+#!/usr/bin/env python3
 import logging
 import re
 import requests
@@ -15,21 +16,25 @@ from telegram.ext import (
     ContextTypes,
     ConversationHandler,
 )
+from telegram.constants import ParseMode
 
 # --- Get bot token and API key from environment variables ---
 # This is crucial for security and deployment on platforms like Render
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL") # Render sets this env var
 
 if not BOT_TOKEN:
     logging.error("BOT_TOKEN environment variable not set!")
     # In a real deployment, you might exit here. For local testing, you could set a default.
-    # For this guide, we'll assume it will be set on Render.
     pass 
 if not GEMINI_API_KEY:
     logging.error("GEMINI_API_KEY environment variable not set!")
     # Same as above.
     pass
+if not WEBHOOK_URL:
+    logging.error("RENDER_EXTERNAL_URL environment variable not set! Webhook setup might fail.")
+
 
 # Enable logging
 logging.basicConfig(
@@ -218,10 +223,11 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return ConversationHandler.END
 
-def main() -> None:
-    """Start the bot using webhooks for Render deployment."""
-    application = Application.builder().token(BOT_TOKEN).build()
+# Define the application object globally for uvicorn
+application = Application.builder().token(BOT_TOKEN).build()
 
+def main() -> None:
+    """Configures the bot application. This function is called once at startup."""
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("summarize", start)],
         states={
@@ -242,22 +248,26 @@ def main() -> None:
     )
     application.add_handler(conv_handler)
 
-    # --- Webhook configuration for Render ---
-    PORT = int(os.environ.get("PORT", "8080")) # Render sets the PORT env var
-    WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL") # Render sets this env var
-
-    if not WEBHOOK_URL:
-        logger.error("RENDER_EXTERNAL_URL environment variable not set. Falling back to polling.")
-        # This block will run if you're testing locally without Render env vars
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
-    else:
-        logger.info(f"Starting webhook on port {PORT} with URL {WEBHOOK_URL}/{BOT_TOKEN}")
-        application.run_webhook(
+    # Set up the webhook if WEBHOOK_URL is available
+    if WEBHOOK_URL:
+        PORT = int(os.environ.get("PORT", "8080")) # Render sets the PORT env var
+        logger.info(f"Setting webhook for URL: {WEBHOOK_URL}/{BOT_TOKEN}")
+        application.setup_webhook(
             listen="0.0.0.0",
             port=PORT,
-            url_path=BOT_TOKEN, # This path is part of the webhook URL Telegram sends updates to
+            url_path=BOT_TOKEN,
             webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
         )
+    else:
+        logger.warning("WEBHOOK_URL not set. Webhook will not be set up automatically.")
 
+# This block is for local testing if not deployed with uvicorn
 if __name__ == "__main__":
-    main()
+    # If running locally and WEBHOOK_URL is not set, fall back to polling
+    if not WEBHOOK_URL:
+        logger.info("Running bot in polling mode (local development).")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+    else:
+        # For Render deployment, main() is called by uvicorn, which then serves 'application'
+        # No explicit run_webhook() or run_polling() here when run by uvicorn
+        main() # Call main to configure the application if run directly (e.g., for debugging)

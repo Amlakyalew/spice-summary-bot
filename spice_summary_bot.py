@@ -18,8 +18,8 @@ from telegram.ext import (
 
 # --- Get bot token and API key from environment variables ---
 # This is crucial for security and deployment on platforms like Render
-BOT_TOKEN = os.environ.get("8031393759:AAGEDONYMP8ZONrY4efwuNT1UOztdyEscGQ")
-GEMINI_API_KEY = os.environ.get("AIzaSyDYJh_xwiV1vGbm3kJMW9ZNOpz-jWmHqnI")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 if not BOT_TOKEN:
     logging.error("BOT_TOKEN environment variable not set!")

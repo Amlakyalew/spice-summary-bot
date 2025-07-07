@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 import logging
 import re
@@ -27,7 +26,6 @@ WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL") # Render sets this env var
 if not BOT_TOKEN:
     logging.error("BOT_TOKEN environment variable not set!")
     # In a real deployment, you might exit here. For local testing, you could set a default.
-    # For this guide, we'll assume it will be set on Render.
     pass 
 if not GEMINI_API_KEY:
     logging.error("GEMINI_API_KEY environment variable not set!")
@@ -52,15 +50,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user for text or a URL to summarize."""
     welcome_message = (
         "Hello! I'm your Spice Summary Bot, designed to give you quick, tailored summaries of any text or URL. "
-        "What makes me 'spicy'? I don't just summarize; I adapt to your needs!\n\n"
-        "My key features include:\n"
-        "- *Customized Summaries:* Get summaries tailored for any audience (e.g., 'for a 10-year-old', 'for a technical expert', 'in simple terms').\n"
-        "- *Sentiment Analysis:* Optionally gauge the overall tone (positive, negative, or neutral) of the content.\n"
-        "- *Key Claims Extraction:* Easily identify the main arguments or claims within the text.\n\n"
-        "Here are the commands you can use:\n"
-        "- /summarize: Start a new summarization process.\n"
-        "- /cancel: Stop any ongoing process.\n"
-        "- /start: See this welcome message again.\n\n"
+        "What makes me 'spicy'? I don't just summarize; I adapt to your needs!\\n\\n"
+        "My key features include:\\n"
+        "- *Customized Summaries:* Get summaries tailored for any audience (e.g., 'for a 10-year-old', 'for a technical expert', 'in simple terms').\\n"
+        "- *Sentiment Analysis:* Optionally gauge the overall tone (positive, negative, or neutral) of the content.\\n"
+        "- *Key Claims Extraction:* Easily identify the main arguments or claims within the text.\\n\\n"
+        "Here are the commands you can use:\\n"
+        "- /summarize: Start a new summarization process.\\n"
+        "- /cancel: Stop any ongoing process.\\n"
+        "- /start: See this welcome message again.\\n\\n"
         "Ready to get started? Send /summarize!"
     )
     await update.message.reply_text(welcome_message, parse_mode=ParseMode.MARKDOWN)
@@ -136,7 +134,7 @@ async def handle_claims_choice_and_summarize(update: Update, context: ContextTyp
     final_output = "Could not process the content."
 
     # Check if input is a URL
-    url_pattern = re.compile(r"https?://(?:www\.)?[\w\.-]+\.\w+(?:/[\w\.-]*)*(?:[\?&][^=&]+=[^=&]+)*")
+    url_pattern = re.compile(r"https?://(?:www\\.)?[\\w\\.-]+\\.\\w+(?:/[\\w\\.-]*)*(?:[\\?&][^=&]+=[^=&]+)*")
     
     text_content = ""
     if url_pattern.match(content): # Use stored content here
@@ -237,40 +235,39 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 # Define the application object globally for uvicorn
 application = Application.builder().token(BOT_TOKEN).build()
 
-def main() -> None:
-    """Configures the bot application. This function is called once at startup."""
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("summarize", start)],
-        states={
-            ASKING_FOR_INPUT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_content),
-            ],
-            ASKING_FOR_AUDIENCE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_audience),
-            ],
-            ASKING_FOR_SENTIMENT: [
-                CallbackQueryHandler(handle_sentiment_choice),
-            ],
-            ASKING_FOR_CLAIMS: [
-                CallbackQueryHandler(handle_claims_choice_and_summarize),
-            ],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
-    application.add_handler(conv_handler)
+# Configure handlers
+conv_handler = ConversationHandler(
+    entry_points=[CommandHandler("summarize", start)],
+    states={
+        ASKING_FOR_INPUT: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, receive_content),
+        ],
+        ASKING_FOR_AUDIENCE: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, receive_audience),
+        ],
+        ASKING_FOR_SENTIMENT: [
+            CallbackQueryHandler(handle_sentiment_choice),
+        ],
+        ASKING_FOR_CLAIMS: [
+            CallbackQueryHandler(handle_claims_choice_and_summarize),
+        ],
+    },
+    fallbacks=[CommandHandler("cancel", cancel)],
+)
+application.add_handler(conv_handler)
 
-    # Set up the webhook if WEBHOOK_URL is available
-    if WEBHOOK_URL:
-        PORT = int(os.environ.get("PORT", "8080")) # Render sets the PORT env var
-        logger.info(f"Setting webhook for URL: {WEBHOOK_URL}/{BOT_TOKEN}")
-        application.setup_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=BOT_TOKEN,
-            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
-        )
-    else:
-        logger.warning("WEBHOOK_URL not set. Webhook will not be set up automatically.")
+# Set up the webhook if WEBHOOK_URL is available
+if WEBHOOK_URL:
+    PORT = int(os.environ.get("PORT", "8080")) # Render sets the PORT env var
+    logger.info(f"Setting webhook for URL: {WEBHOOK_URL}/{BOT_TOKEN}")
+    application.setup_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=BOT_TOKEN,
+        webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
+    )
+else:
+    logger.warning("WEBHOOK_URL not set. Webhook will not be set up automatically.")
 
 # This block is for local testing if not deployed with uvicorn
 if __name__ == "__main__":
@@ -279,6 +276,6 @@ if __name__ == "__main__":
         logger.info("Running bot in polling mode (local development).")
         application.run_polling(allowed_updates=Update.ALL_TYPES)
     else:
-        # For Render deployment, main() is called by uvicorn, which then serves 'application'
-        # No explicit run_webhook() or run_polling() here when run by uvicorn
-        main() # Call main to configure the application if run directly (e.g., for debugging)
+        # When deployed with uvicorn, uvicorn will serve application.web_server directly.
+        # No explicit run_webhook() or run_polling() here.
+        pass # This pass is important as uvicorn will run the application.web_server directly

@@ -235,7 +235,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 # Define the application object globally for uvicorn
 application = Application.builder().token(BOT_TOKEN).build()
 
-# Configure handlers
+# Configure handlers (moved outside main to ensure they are added when application is created)
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler("summarize", start)],
     states={
@@ -257,15 +257,12 @@ conv_handler = ConversationHandler(
 application.add_handler(conv_handler)
 
 # Set up the webhook if WEBHOOK_URL is available
+# This part is now handled directly by the application.web_server when uvicorn runs it.
 if WEBHOOK_URL:
     PORT = int(os.environ.get("PORT", "8080")) # Render sets the PORT env var
     logger.info(f"Setting webhook for URL: {WEBHOOK_URL}/{BOT_TOKEN}")
-    application.setup_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=BOT_TOKEN,
-        webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
-    )
+    # The setup_webhook call is now part of the web_server's lifecycle when served by uvicorn
+    # application.setup_webhook(listen="0.0.0.0", port=PORT, url_path=BOT_TOKEN, webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}")
 else:
     logger.warning("WEBHOOK_URL not set. Webhook will not be set up automatically.")
 

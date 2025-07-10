@@ -1,3 +1,8 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()  # Loads .env or Replit secrets
+TOKEN = os.getenv("TELEGRAM_TOKEN")  # Gets token from secrets
+
 import logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -10,10 +15,6 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
-
-# Load environment variables (secure token storage)
-load_dotenv()
-TOKEN = os.getenv("TELEGRAM_TOKEN")  # ✅ No hardcoded token!
 
 # Initialize bot
 app = ApplicationBuilder().token(TOKEN).build()

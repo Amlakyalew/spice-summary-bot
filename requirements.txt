@@ -3,4 +3,4 @@ requests
 beautifulsoup4
 uvicorn
 cachetools
-googletrans==4.0.0rc1
+googletrans==3.0.0
